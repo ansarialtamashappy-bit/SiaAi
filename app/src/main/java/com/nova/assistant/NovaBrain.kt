@@ -34,11 +34,38 @@ class NovaBrain(private val launcher: AppLauncher) {
         "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"
     )
 
+    private fun timeReply(): String {
+        val c = Calendar.getInstance()
+        val h24 = c.get(Calendar.HOUR_OF_DAY)
+        val min = c.get(Calendar.MINUTE)
+        var h12 = h24 % 12
+        if (h12 == 0) h12 = 12
+        val part = when (h24) {
+            in 4..11 -> "सुबह"
+            in 12..15 -> "दोपहर"
+            in 16..19 -> "शाम"
+            else -> "रात"
+        }
+        return if (min == 0) {
+            "अभी $part के $h12 बजे हैं।"
+        } else {
+            "अभी $part के $h12 बजकर $min मिनट हुए हैं।"
+        }
+    }
+
+    private fun dateReply(): String {
+        val c = Calendar.getInstance()
+        val day = days[c.get(Calendar.DAY_OF_WEEK) - 1]
+        val d = c.get(Calendar.DAY_OF_MONTH)
+        val m = months[c.get(Calendar.MONTH)]
+        val y = c.get(Calendar.YEAR)
+        return "आज $day है, $d $m $y।"
+    }
+
     fun reply(raw: String): String {
         val t = raw.lowercase().trim()
         val tokens = t.split(Regex("\\s+")).toSet()
 
-        // 1. App kholna
         if (openWords.any { t.contains(it) }) {
             var s = t
             for (w in openWords) s = s.replace(w, " ")
@@ -48,34 +75,25 @@ class NovaBrain(private val launcher: AppLauncher) {
             return launcher.open(t, target)
         }
 
-        // 2. Time
         if (timeWords.any { t.contains(it) }) return timeReply()
 
-        // 3. Date
         if (tokens.contains("date") || dateWords.any { t.contains(it) }) return dateReply()
 
-        // 4. Naam
-        if (listOf("tumhara naam", "aapka naam", "kaun ho", "तुम्हारा नाम", "आपका नाम", "कौन हो")
-                .any { t.contains(it) }
-        ) {
+        val nameWords = listOf("tumhara naam", "aapka naam", "kaun ho", "तुम्हारा नाम", "आपका नाम", "कौन हो")
+        if (nameWords.any { t.contains(it) }) {
             return "मेरा नाम सिया है। मैं आपका वॉइस असिस्टेंट हूँ।"
         }
 
-        // 5. Help
-        if (listOf("kya kar sakte", "help", "madad", "क्या कर सकते", "मदद", "हेल्प")
-                .any { t.contains(it) }
-        ) {
+        val helpWords = listOf("kya kar sakte", "help", "madad", "क्या कर सकते", "मदद", "हेल्प")
+        if (helpWords.any { t.contains(it) }) {
             return "मैं समय और तारीख बता सकती हूँ, और ऐप खोल सकती हूँ। जैसे कहिए: यूट्यूब खोलो।"
         }
 
-        // 6. Thanks
-        if (listOf("thanks", "thank you", "shukriya", "dhanyavad", "धन्यवाद", "शुक्रिया", "थैंक")
-                .any { t.contains(it) }
-        ) {
+        val thanksWords = listOf("thanks", "thank you", "shukriya", "dhanyavad", "धन्यवाद", "शुक्रिया", "थैंक")
+        if (thanksWords.any { t.contains(it) }) {
             return "आपका स्वागत है!"
         }
 
-        // 7. Greeting
         val greetings = setOf(
             "hello", "hi", "hey", "namaste", "नमस्ते", "हेलो", "हैलो", "हाय",
             "sia", "सिया", "nova", "नोवा"
@@ -84,4 +102,6 @@ class NovaBrain(private val launcher: AppLauncher) {
             return "नमस्ते! मैं सिया हूँ। बताइए, मैं आपकी क्या मदद करूँ?"
         }
 
-        return "माफ़ कीजिए, मुझे समझ नहीं आया। आप कह सकते हैं: समय क्या हुआ है, या
+        return "माफ़ कीजिए, मुझे समझ नहीं आया। आप कह सकते हैं: समय क्या हुआ है, या यूट्यूब खोलो।"
+    }
+}
