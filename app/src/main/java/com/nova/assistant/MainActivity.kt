@@ -50,4 +50,115 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             return
         }
         val result = tts?.setLanguage(Locale.forLanguageTag("hi-IN"))
-        if (result == TextToSpeech.LANG_MISSING_DATA || result ==
+        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+            tvStatus.text = "Hindi voice installed nahi hai. Settings > Text-to-speech > Google > Install voice data > Hindi."
+        }
+        ttsReady = true
+    }
+
+    private fun checkPermissionAndListen() {
+        val granted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (granted) {
+            startListening()
+        } else {
+            ActivityCompat.requestPermissions(
+                this, arrayOf(Manifest.permission.RECORD_AUDIO), micRequestCode
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == micRequestCode) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startListening()
+            } else {
+                tvStatus.text = "Mic ki permission nahi mili. Phone Settings > Apps > Sia AI > Permissions mein Microphone allow karein."
+            }
+        }
+    }
+
+    private fun speak(text: String) {
+        tvReply.text = "Sia: $text"
+        if (ttsReady) {
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "nova_reply")
+        }
+    }
+
+    override fun onDestroy() {
+        recognizer?.destroy()
+        tts?.stop()
+        tts?.shutdown()
+        super.onDestroy()
+    }
+
+    private fun startListening() {
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            tvStatus.text = "Is phone mein speech recognition available nahi hai. Google app update/install karein."
+            return
+        }
+
+        tts?.stop()
+        recognizer?.destroy()
+        recognizer = SpeechRecognizer.createSpeechRecognizer(this)
+
+        recognizer?.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {
+                tvStatus.text = "Sun raha hoon... boliye"
+            }
+
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+
+            override fun onEndOfSpeech() {
+                tvStatus.text = "Samajh raha hoon..."
+            }
+
+            override fun onError(error: Int) {
+                tvStatus.text = when (error) {
+                    SpeechRecognizer.ERROR_NO_MATCH,
+                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Kuch sunai nahi diya. Dobara try karein."
+                    SpeechRecognizer.ERROR_NETWORK,
+                    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Internet problem hai. Connection check karein."
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Mic permission chahiye."
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognizer busy hai. Thodi der baad try karein."
+                    else -> "Kuch gadbad hui (code $error). Dobara try karein."
+                }
+            }
+
+            override fun onResults(results: Bundle?) {
+                val list = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                val heard = list?.firstOrNull()
+                if (heard.isNullOrBlank()) {
+                    tvStatus.text = "Kuch sunai nahi diya. Dobara try karein."
+                    return
+                }
+                tvStatus.text = "Mic dabaiye aur boliye"
+                tvHeard.text = "Aapne kaha: $heard"
+                val reply = brain.reply(heard)
+                speak(reply)
+            }
+
+            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+        }
+        recognizer?.startListening(intent)
+    }
+}
