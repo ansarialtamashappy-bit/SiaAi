@@ -107,4 +107,16 @@ class AppLauncher(private val context: Context) {
     private fun launchPackage(pkg: String, label: String): String {
         val intent = context.packageManager.getLaunchIntentForPackage(pkg)
             ?: return "$label इस फोन में इंस्टॉल नहीं है।"
-        return startIntent(intent,
+        return startIntent(intent, label)
+    }
+
+    private fun startIntent(intent: Intent, label: String): String {
+        return try {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            "ठीक है, $label खोल रहा हूँ।"
+        } catch (e: Exception) {
+            "$label नहीं खुल पाया।"
+        }
+    }
+}
