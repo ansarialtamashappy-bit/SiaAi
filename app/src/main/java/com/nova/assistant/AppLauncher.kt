@@ -18,7 +18,7 @@ class AppLauncher(private val context: Context) {
             listOf("whatsapp", "whats app", "व्हाट्सएप", "व्हाट्सऐप", "वाट्सएप", "वॉट्सऐप", "व्हॉट्सएप", "व्हाट्स ऐप"),
             "com.whatsapp"),
         KnownApp("यूट्यूब",
-            listOf("youtube", "you tube", "यूट्यूब", "यू ट्यूब", "यूटूब"),
+            listOf("youtube", "you tube", "यूट्यूब", "यू ट्यूब", "यूटूब", "युटुब", "यु ट्यूब"),
             "com.google.android.youtube"),
         KnownApp("क्रोम",
             listOf("chrome", "क्रोम", "browser", "ब्राउज़र", "ब्राउजर"),
