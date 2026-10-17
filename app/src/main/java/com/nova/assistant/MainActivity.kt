@@ -54,11 +54,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             tvStatus.text = "Hindi voice installed nahi hai. Settings > Text-to-speech > Google > Install voice data > Hindi."
         }
         try {
-            val femaleVoice = tts?.voices?.firstOrNull {
-                it.locale.language == "hi" && it.name.contains("female", true)
-            }
-            if (femaleVoice != null) {
-                tts?.setVoice(femaleVoice)
+            val hindiVoices = tts?.voices?.filter { it.locale.language == "hi" } ?: emptyList()
+            val pick = hindiVoices.firstOrNull { it.name.contains("female", true) }
+                ?: hindiVoices.firstOrNull { it.name.contains("hia") }
+            if (pick != null) {
+                tts?.setVoice(pick)
             }
             tts?.setPitch(1.1f)
         } catch (e: Exception) {
