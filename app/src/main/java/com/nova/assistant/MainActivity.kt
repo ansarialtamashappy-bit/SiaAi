@@ -8,7 +8,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
-import android.widget.Button11 -> "Voice service disconnect ho gayi. Mic dobara dabaiye."
+import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -52,6 +52,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val result = tts?.setLanguage(Locale.forLanguageTag("hi-IN"))
         if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
             tvStatus.text = "Hindi voice installed nahi hai. Settings > Text-to-speech > Google > Install voice data > Hindi."
+        }
+        try {
+            val femaleVoice = tts?.voices?.firstOrNull {
+                it.locale.language == "hi" && it.name.contains("female", true)
+            }
+            if (femaleVoice != null) {
+                tts?.setVoice(femaleVoice)
+            }
+            tts?.setPitch(1.1f)
+        } catch (e: Exception) {
         }
         ttsReady = true
     }
@@ -130,6 +140,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Internet problem hai. Connection check karein."
                     SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Mic permission chahiye."
                     SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognizer busy hai. Thodi der baad try karein."
+                    11 -> "Voice service disconnect ho gayi. Mic dobara dabaiye."
                     else -> "Kuch gadbad hui (code $error). Dobara try karein."
                 }
             }
