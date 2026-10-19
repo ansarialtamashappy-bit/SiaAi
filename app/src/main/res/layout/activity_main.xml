@@ -50,10 +50,27 @@
         android:layout_height="0dp"
         android:layout_weight="1" />
 
+    <EditText
+        android:id="@+id/etKey"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="AI key yahan paste karein"
+        android:inputType="textPassword"
+        android:singleLine="true"
+        android:textSize="16sp" />
+
+    <Button
+        android:id="@+id/btnSaveKey"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Key save karo"
+        android:textSize="16sp" />
+
     <Button
         android:id="@+id/btnMic"
         android:layout_width="match_parent"
         android:layout_height="72dp"
+        android:layout_marginTop="12dp"
         android:text="🎤  Bolne ke liye dabaiye"
         android:textSize="18sp" />
 
