@@ -8,7 +8,16 @@ import java.net.URL
 
 class AiBrain(private val context: Context) {
 
+    private class Result(val ok: Boolean, val code: Int, val text: String)
+
     private val prefs = context.getSharedPreferences("sia_prefs", Context.MODE_PRIVATE)
+
+    private val models = listOf(
+        "gemini-2.5-flash",
+        "gemini-3.5-flash",
+        "gemini-3.1-flash-lite",
+        "gemini-flash-latest"
+    )
 
     fun saveKey(key: String) {
         prefs.edit().putString("api_key", key.trim()).apply()
@@ -23,8 +32,23 @@ class AiBrain(private val context: Context) {
         if (key.isBlank()) {
             return "AI ke liye pehle API key daalni hogi."
         }
+        var last = "AI se jawab nahi mila."
+        for (m in models) {
+            val r = call(key, m, question)
+            if (r.ok) {
+                return r.text
+            }
+            last = r.text
+            if (r.code != 404) {
+                break
+            }
+        }
+        return last
+    }
+
+    private fun call(key: String, model: String, question: String): Result {
         return try {
-            val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent")
+            val url = URL("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Content-Type", "application/json")
@@ -44,19 +68,27 @@ class AiBrain(private val context: Context) {
 
             val code = conn.responseCode
             if (code != 200) {
-                return "AI se jawab nahi mila (code $code). Key ya internet check karein."
+                Result(false, code, "AI se jawab nahi mila (code $code, model $model).")
+            } else {
+                val text = conn.inputStream.bufferedReader().use { it.readText() }
+                val parts = JSONObject(text)
+                    .getJSONArray("candidates")
+                    .getJSONObject(0)
+                    .getJSONObject("content")
+                    .getJSONArray("parts")
+                val sb = StringBuilder()
+                for (i in 0 until parts.length()) {
+                    sb.append(parts.getJSONObject(i).optString("text", ""))
+                }
+                val answer = sb.toString().trim()
+                if (answer.isEmpty()) {
+                    Result(false, 200, "AI ne khali jawab diya.")
+                } else {
+                    Result(true, 200, answer)
+                }
             }
-            val text = conn.inputStream.bufferedReader().use { it.readText() }
-            JSONObject(text)
-                .getJSONArray("candidates")
-                .getJSONObject(0)
-                .getJSONObject("content")
-                .getJSONArray("parts")
-                .getJSONObject(0)
-                .getString("text")
-                .trim()
         } catch (e: Exception) {
-            "AI se baat nahi ho paayi. Internet check karein."
+            Result(false, -1, "AI error: " + e.javaClass.simpleName)
         }
     }
 }
