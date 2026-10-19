@@ -9,6 +9,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -21,13 +22,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var tvHeard: TextView
     private lateinit var tvReply: TextView
     private lateinit var btnMic: Button
+    private lateinit var btnSaveKey: Button
+    private lateinit var etKey: EditText
 
     private var recognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
     private var ttsReady = false
 
     private lateinit var brain: NovaBrain
+    private lateinit var ai: AiBrain
     private val micRequestCode = 101
+    private val fallbackText = "माफ़ कीजिए, मुझे समझ नहीं आया"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,11 +42,24 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         tvHeard = findViewById(R.id.tvHeard)
         tvReply = findViewById(R.id.tvReply)
         btnMic = findViewById(R.id.btnMic)
+        btnSaveKey = findViewById(R.id.btnSaveKey)
+        etKey = findViewById(R.id.etKey)
 
         brain = NovaBrain(AppLauncher(this))
+        ai = AiBrain(this)
         tts = TextToSpeech(this, this)
 
         btnMic.setOnClickListener { checkPermissionAndListen() }
+        btnSaveKey.setOnClickListener {
+            val k = etKey.text.toString().trim()
+            if (k.isEmpty()) {
+                tvStatus.text = "Pehle key paste karein."
+            } else {
+                ai.saveKey(k)
+                etKey.setText("")
+                tvStatus.text = "Key save ho gayi."
+            }
+        }
     }
 
     override fun onInit(status: Int) {
@@ -54,13 +72,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             tvStatus.text = "Hindi voice installed nahi hai. Settings > Text-to-speech > Google > Install voice data > Hindi."
         }
         try {
-            val hindiVoices = tts?.voices?.filter { it.locale.language == "hi" } ?: emptyList()
-            val pick = hindiVoices.firstOrNull { it.name.contains("female", true) }
-                ?: hindiVoices.firstOrNull { it.name.contains("hia") }
+            val hindi = tts?.voices?.filter { it.locale.language == "hi" } ?: emptyList()
+            val pick = hindi.firstOrNull {
+                it.name.contains("hia", true) || it.name.contains("hic", true) || it.name.contains("female", true)
+            }
             if (pick != null) {
                 tts?.setVoice(pick)
             }
-            tts?.setPitch(1.1f)
+            tts?.setPitch(1.4f)
         } catch (e: Exception) {
         }
         ttsReady = true
@@ -99,6 +118,22 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         tvReply.text = "Sia: $text"
         if (ttsReady) {
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "nova_reply")
+        }
+    }
+
+    private fun handle(heard: String) {
+        val reply = brain.reply(heard)
+        if (reply.startsWith(fallbackText) && ai.hasKey()) {
+            tvStatus.text = "AI se pooch rahi hoon..."
+            Thread {
+                val answer = ai.ask(heard)
+                runOnUiThread {
+                    tvStatus.text = "Mic dabaiye aur boliye"
+                    speak(answer)
+                }
+            }.start()
+        } else {
+            speak(reply)
         }
     }
 
@@ -154,8 +189,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 }
                 tvStatus.text = "Mic dabaiye aur boliye"
                 tvHeard.text = "Aapne kaha: $heard"
-                val reply = brain.reply(heard)
-                speak(reply)
+                handle(heard)
             }
 
             override fun onPartialResults(partialResults: Bundle?) {}
