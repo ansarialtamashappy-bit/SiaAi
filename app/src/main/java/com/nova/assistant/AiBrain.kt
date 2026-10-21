@@ -28,7 +28,9 @@ class AiBrain(private val context: Context) {
     }
 
     fun ask(question: String): String {
-              val key = (prefs.getString("api_key", "") ?: "").filter { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '_' || it == '-' }
+        val key = (prefs.getString("api_key", "") ?: "").filter {
+            it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '_' || it == '-'
+        }
         if (key.isBlank()) {
             return "AI ke liye pehle API key daalni hogi."
         }
@@ -43,7 +45,7 @@ class AiBrain(private val context: Context) {
                 break
             }
         }
-        return last
+        return last + " (key ki lambai: " + key.length + ")"
     }
 
     private fun call(key: String, model: String, question: String): Result {
@@ -68,7 +70,13 @@ class AiBrain(private val context: Context) {
 
             val code = conn.responseCode
             if (code != 200) {
-                Result(false, code, "AI se jawab nahi mila (code $code, model $model).")
+                var msg = ""
+                try {
+                    val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                    msg = JSONObject(err).getJSONObject("error").getString("message")
+                } catch (e: Exception) {
+                }
+                Result(false, code, "AI se jawab nahi mila (code $code, model $model). " + msg.take(200))
             } else {
                 val text = conn.inputStream.bufferedReader().use { it.readText() }
                 val parts = JSONObject(text)
