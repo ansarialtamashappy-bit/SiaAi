@@ -28,7 +28,7 @@ class AiBrain(private val context: Context) {
     }
 
     fun ask(question: String): String {
-        val key = prefs.getString("api_key", "") ?: ""
+              val key = (prefs.getString("api_key", "") ?: "").filter { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '_' || it == '-' }
         if (key.isBlank()) {
             return "AI ke liye pehle API key daalni hogi."
         }
